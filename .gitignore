@@ -24,3 +24,5 @@ results/reports/*
 # Notebook checkpoint files
 .ipynb_checkpoints/
 **/.ipynb_checkpoints/
+.env
+*.token
