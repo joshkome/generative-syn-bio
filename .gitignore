@@ -9,3 +9,18 @@ results/
 *.pt
 *.bin
 *.safetensors
+
+# Data — keep folder structure, ignore contents
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/reference/.gitkeep
+
+# Results — keep figures you explicitly add, ignore everything else
+results/reports/*
+!results/reports/.gitkeep
+
+# Notebook checkpoint files
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
