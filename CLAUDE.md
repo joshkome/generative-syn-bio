@@ -13,11 +13,11 @@ conditioning modes (no context → upstream only → full context → tagged ful
 ## Repository Structure
     src/
       schema/         Stage 1 — PartSpec Pydantic model (DONE)
-      parser/         Stage 2 — Cello output → List[PartSpec] (NEXT)
-      generation/     Stage 3 — evo2 interface + GenerationMode enum (DONE)
-      scoring/        Stage 4 — MultiObjectiveScorer + ScoreVector (TODO)
+      parser/         Stage 2 — Cello UCF → List[PartSpec] (DONE)
+      generation/     Stage 3 — Evo 2 interface + GenerationMode enum (DONE)
+      scoring/        Stage 4 — MultiObjectiveScorer + ScoreVector (NEXT)
       validation/     Stage 5 — End-to-end NOT gate run (TODO)
-    tests/            13 passing tests (schema + generation)
+    tests/            36 passing tests (schema + parser + generation)
     data/
       raw/            Gitignored. Run scripts/download_datasets.sh to populate.
       processed/      Gitignored. Pipeline outputs go here.
@@ -27,16 +27,23 @@ conditioning modes (no context → upstream only → full context → tagged ful
     results/          Figures and reports (gitignored except explicit commits)
 
 ## Current Stage
-Stage 2 — Cello Parser
-File to create: src/parser/cello_parser.py
-Input:  data/raw/Eco1C1G1T1.UCF.json (already downloaded)
-Output: List[PartSpec] (one per part slot in the circuit)
-Test:   tests/test_parser.py
+Stage 4 — Scoring Pipeline
+Files to create:
+  src/scoring/types.py     — ScoreVector dataclass + ScorerWeights config
+  src/scoring/scorer.py    — MultiObjectiveScorer (gc, structure, composite)
+Test: tests/test_scoring.py
+
+The primary scoring axis is Evo 2 log_prob (already on GeneratedSequence).
+Additional axes gate candidates via hard filters (GC, length) and soft scores
+(ViennaRNA MFE for terminators/ribozymes, Shine-Dalgarno for RBS parts).
+The composite_score drives ranking; ScoreVector.passes_hard_filters() gates
+entry into the ranked set.
 
 ## Key Data Contracts
-    src/schema/part_spec.py      → PartSpec       (all stages communicate via this)
+    src/schema/part_spec.py      → PartSpec            (all stages communicate via this)
+    src/parser/cello_parser.py   → parse_ucf()         (UCF JSON → List[PartSpec])
     src/generation/types.py      → GeneratedSequence, GenerationMode
-    src/scoring/types.py         → ScoreVector    (TODO — Stage 4)
+    src/scoring/types.py         → ScoreVector, ScorerWeights  (Stage 4)
 
 ## Environment
     Python 3.11 — activate with: source .venv/bin/activate
@@ -48,6 +55,7 @@ Test:   tests/test_parser.py
     pytest tests/ -v                     # all tests
     pytest tests/test_schema.py -v       # stage 1 only
     pytest tests/test_parser.py -v       # stage 2 only
+    pytest tests/test_scoring.py -v      # stage 4 only
     pytest tests/ -k "not integration"   # skip slow Evo 2 model tests
 
 ## Running the Pipeline (Stage 5 — not yet built)
@@ -73,13 +81,14 @@ Test:   tests/test_parser.py
 - pytest needs pythonpath = ["."] in pyproject.toml (already set) to resolve src.*
 - evo2 package expects short model names e.g. 'evo2_1b_base' not full HF path
 - ViennaRNA installed via pip (2.7.2) — no conda needed on Apple Silicon
-- NUPACK 4.0 still needs separate install from nupack.org (Stage 4, not yet needed)
-- RBS Calculator needs separate install from salis-lab (Stage 4, not yet needed)
+- NUPACK 4.0 still needs separate install from nupack.org (Stage 4, deferred)
+- RBS Calculator needs separate install from salis-lab (Stage 4, deferred — use proxy)
 - data/raw/ is gitignored — teammates must run download_datasets.sh after cloning
+- ViennaRNA Python bindings import as `RNA` (from `ViennaRNA` pip package)
 
 ## Stage Status
     Stage 1 — PartSpec schema          DONE  (6 tests passing)
-    Stage 2 — Cello parser             IN PROGRESS
+    Stage 2 — Cello parser             DONE  (23 tests passing)
     Stage 3 — Evo 2 interface          DONE  (7 tests passing, model tests need GPU)
-    Stage 4 — Scoring pipeline         TODO
+    Stage 4 — Scoring pipeline         NEXT
     Stage 5 — End-to-end validation    TODO
