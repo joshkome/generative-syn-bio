@@ -15,9 +15,10 @@ conditioning modes (no context → upstream only → full context → tagged ful
       schema/         Stage 1 — PartSpec Pydantic model (DONE)
       parser/         Stage 2 — Cello UCF → List[PartSpec] (DONE)
       generation/     Stage 3 — Evo 2 interface + GenerationMode enum (DONE)
-      scoring/        Stage 4 — MultiObjectiveScorer + ScoreVector (NEXT)
-      validation/     Stage 5 — End-to-end NOT gate run (TODO)
-    tests/            36 passing tests (schema + parser + generation)
+      scoring/        Stage 4 — MultiObjectiveScorer + ScoreVector (DONE)
+      validation/     Stage 5 — CircuitValidator + CircuitReport (DONE)
+    tests/            104 passing tests (all stages); 1 integration skipped (needs GPU)
+    scripts/          run_pipeline.py, run_ablation.py
     data/
       raw/            Gitignored. Run scripts/download_datasets.sh to populate.
       processed/      Gitignored. Pipeline outputs go here.
@@ -27,17 +28,14 @@ conditioning modes (no context → upstream only → full context → tagged ful
     results/          Figures and reports (gitignored except explicit commits)
 
 ## Current Stage
-Stage 4 — Scoring Pipeline
-Files to create:
-  src/scoring/types.py     — ScoreVector dataclass + ScorerWeights config
-  src/scoring/scorer.py    — MultiObjectiveScorer (gc, structure, composite)
-Test: tests/test_scoring.py
+All 5 stages complete. The pipeline is fully connected:
+  parse_ucf() → Evo2Generator.generate() → MultiObjectiveScorer.rank() → CircuitValidator.validate_circuit()
 
-The primary scoring axis is Evo 2 log_prob (already on GeneratedSequence).
-Additional axes gate candidates via hard filters (GC, length) and soft scores
-(ViennaRNA MFE for terminators/ribozymes, Shine-Dalgarno for RBS parts).
-The composite_score drives ranking; ScoreVector.passes_hard_filters() gates
-entry into the ranked set.
+Next steps:
+  - Run scripts on GPU to generate actual candidates (run_pipeline.py, run_ablation.py)
+  - Collect ablation study data (4 modes × A1_AmtR gate)
+  - Build notebooks for analysis/visualization
+  - Write thesis results section
 
 ## Key Data Contracts
     src/schema/part_spec.py      → PartSpec            (all stages communicate via this)
@@ -52,11 +50,13 @@ entry into the ranked set.
     Evo 2 model: set EVO2_MODEL in .env (defaults to arcinstitute/evo2_1b_base)
 
 ## Running Tests
-    pytest tests/ -v                     # all tests
-    pytest tests/test_schema.py -v       # stage 1 only
-    pytest tests/test_parser.py -v       # stage 2 only
-    pytest tests/test_scoring.py -v      # stage 4 only
-    pytest tests/ -k "not integration"   # skip slow Evo 2 model tests
+    pytest tests/ -v                          # all tests
+    pytest tests/test_schema.py -v            # stage 1 only
+    pytest tests/test_parser.py -v            # stage 2 only
+    pytest tests/test_scoring.py -v           # stage 4 only
+    pytest tests/test_validation.py -v        # stage 5 only
+    pytest tests/ -k "not integration" -v     # skip GPU-requiring Evo 2 model tests
+    pytest tests/ -m integration -v           # run GPU integration tests only
 
 ## Running the Pipeline (Stage 5 — not yet built)
     python scripts/run_pipeline.py \
@@ -87,8 +87,9 @@ entry into the ranked set.
 - ViennaRNA Python bindings import as `RNA` (from `ViennaRNA` pip package)
 
 ## Stage Status
-    Stage 1 — PartSpec schema          DONE  (6 tests passing)
-    Stage 2 — Cello parser             DONE  (23 tests passing)
-    Stage 3 — Evo 2 interface          DONE  (7 tests passing, model tests need GPU)
-    Stage 4 — Scoring pipeline         NEXT
-    Stage 5 — End-to-end validation    TODO
+    Stage 1 — PartSpec schema          DONE  (6 tests)
+    Stage 2 — Cello parser             DONE  (23 tests)
+    Stage 3 — Evo 2 interface          DONE  (7 tests; model tests need GPU)
+    Stage 4 — Scoring pipeline         DONE  (44 tests)
+    Stage 5 — Validation + scripts     DONE  (24 tests + 1 integration skipped)
+    Total: 104 passing, 1 skipped

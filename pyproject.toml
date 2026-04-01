@@ -35,3 +35,6 @@ build-backend = "setuptools.build_meta"
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+markers = [
+    "integration: requires Evo 2 model download and GPU (deselect with -k 'not integration')",
+]
