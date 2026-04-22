@@ -1,95 +1,64 @@
 # CLAUDE.md
 
 ## Project Overview
-Scaffolding pipeline connecting Cello circuit design outputs to Evo 2 DNA language
-model generation. Replaces part library lookup with context-aware sequence generation.
+Investigation of Evo 2 as a scoring function for synthetic genetic circuit design.
+Uses Cello circuit outputs (UCF format) as sequence context for two validation experiments.
+This is a research/analysis project — not a generation pipeline.
 
-## Thesis
-Large-context DNA language models (Evo 2) have a structural advantage for
-circuit-aware part generation when full flanking sequence context is provided.
-The key ablation compares Evo 2 log-probability as a fitness proxy across 4
-conditioning modes (no context → upstream only → full context → tagged full).
+## Research Questions
+1. Does Evo 2 log-likelihood correlate with measured RBS translation strength when scored
+   in circuit context? (Kosuri validation)
+2. Does providing more circuit context improve Evo 2 log-probability scores for generated
+   sequences? (4-mode context ablation via NVIDIA NIM)
 
 ## Repository Structure
-    src/
-      schema/         Stage 1 — PartSpec Pydantic model (DONE)
-      parser/         Stage 2 — Cello UCF → List[PartSpec] (DONE)
-      generation/     Stage 3 — Evo 2 interface + GenerationMode enum (DONE)
-      scoring/        Stage 4 — MultiObjectiveScorer + ScoreVector (DONE)
-      validation/     Stage 5 — CircuitValidator + CircuitReport (DONE)
-    tests/            104 passing tests (all stages); 1 integration skipped (needs GPU)
-    scripts/          run_pipeline.py, run_ablation.py
+    notebooks/
+      ablation_local_NVIDIA.ipynb   — context ablation study (NVIDIA NIM API, A1_AmtR gate)
+      rbs_kosuri_correlation.ipynb  — exploratory correlation notebook (superseded by script)
+      rbs_scoring_kosuri.ipynb      — Colab scoring notebook (requires GPU)
+    scripts/
+      build_kosuri_contexts.py      — generates kosuri_contexts.csv from UCF + RBS dataset
+      analyze_rbs_correlation.py    — correlation analysis + saves all plots to results/
     data/
-      raw/            Gitignored. Run scripts/download_datasets.sh to populate.
-      processed/      Gitignored. Pipeline outputs go here.
-      reference/      Gitignored. iGEM characterized parts.
-    notebooks/        Jupyter notebooks, one per stage
-    scripts/          Runners and download scripts
-    results/          Figures and reports (gitignored except explicit commits)
+      raw/                          — Cello UCF + input/output JSON (gitignored)
+      reference/kosuri_rbs.csv      — Kosuri et al. 2013 RBS library (111 sequences + xlat rates)
+      processed/
+        kosuri_contexts.csv         — full circuit sequences with each Kosuri RBS swapped in
+        kosuri_contexts_labeled.csv — same + manually scored Evo2 NLL via online interface
+    results/
+      ablation/                     — ablation plots and score CSVs (A1_AmtR, 4 modes)
+      rbs_kosuri_scoring/           — correlation plots and stats CSV
+    old/                            — archived pipeline code (src/, tests/, prior scripts)
 
-## Current Stage
-All 5 stages complete. The pipeline is fully connected:
-  parse_ucf() → Evo2Generator.generate() → MultiObjectiveScorer.rank() → CircuitValidator.validate_circuit()
+## Key Scripts
+    # Build the kosuri context CSV from UCF + RBS dataset
+    python scripts/build_kosuri_contexts.py
 
-Next steps:
-  - Run scripts on GPU to generate actual candidates (run_pipeline.py, run_ablation.py)
-  - Collect ablation study data (4 modes × A1_AmtR gate)
-  - Build notebooks for analysis/visualization
-  - Write thesis results section
+    # Run correlation analysis and save all plots
+    python scripts/analyze_rbs_correlation.py
 
-## Key Data Contracts
-    src/schema/part_spec.py      → PartSpec            (all stages communicate via this)
-    src/parser/cello_parser.py   → parse_ucf()         (UCF JSON → List[PartSpec])
-    src/generation/types.py      → GeneratedSequence, GenerationMode
-    src/scoring/types.py         → ScoreVector, ScorerWeights  (Stage 4)
+    # Both accept --help for path overrides
 
 ## Environment
     Python 3.11 — activate with: source .venv/bin/activate
-    Install deps: pip install -e ".[dev]"
-    Token storage: .env file in project root (never commit this)
-    Evo 2 model: set EVO2_MODEL in .env (defaults to arcinstitute/evo2_1b_base)
+    Install: pip install pandas scipy matplotlib seaborn
 
-## Running Tests
-    pytest tests/ -v                          # all tests
-    pytest tests/test_schema.py -v            # stage 1 only
-    pytest tests/test_parser.py -v            # stage 2 only
-    pytest tests/test_scoring.py -v           # stage 4 only
-    pytest tests/test_validation.py -v        # stage 5 only
-    pytest tests/ -k "not integration" -v     # skip GPU-requiring Evo 2 model tests
-    pytest tests/ -m integration -v           # run GPU integration tests only
+## Key Data Files
+    data/raw/Eco1C1G1T1.UCF.json            — Cello E. coli gate library (gitignored)
+    data/reference/kosuri_rbs.csv           — source RBS sequences and xlat measurements
+    data/processed/kosuri_contexts_labeled.csv — primary analysis input
 
-## Running the Pipeline (Stage 5 — not yet built)
-    python scripts/run_pipeline.py \
-        --circuit data/processed/not_gate \
-        --mode TAGGED_FULL \
-        --n-candidates 100 \
-        --output results/not_gate_run1
-
-## Running the Ablation (Stage 5 — not yet built)
-    python scripts/run_ablation.py \
-        --dataset data/reference/mutalik_rbs.csv \
-        --output results/ablation
-
-## Package Notes
-- evo2 package (pip install evo2) wraps model loading and generation
-  Model IDs: evo2_1b_base (dev/Mac), evo2_7b (GPU runs)
-  Model is lazy-loaded — not downloaded until generate() is first called
-- python-dotenv loads .env automatically via src/config.py
-- All modules should import config via: from src.config import ...
+## Cello Parser
+    src/parser/cello_parser.py — parse_ucf() is still used by build_kosuri_contexts.py
+    src/schema/part_spec.py    — PartSpec model used by the parser
+    These are the only src/ modules actively used; the rest is in old/
 
 ## Known Issues / Gotchas
-- pytest needs pythonpath = ["."] in pyproject.toml (already set) to resolve src.*
-- evo2 package expects short model names e.g. 'evo2_1b_base' not full HF path
-- ViennaRNA installed via pip (2.7.2) — no conda needed on Apple Silicon
-- NUPACK 4.0 still needs separate install from nupack.org (Stage 4, deferred)
-- RBS Calculator needs separate install from salis-lab (Stage 4, deferred — use proxy)
-- data/raw/ is gitignored — teammates must run download_datasets.sh after cloning
-- ViennaRNA Python bindings import as `RNA` (from `ViennaRNA` pip package)
-
-## Stage Status
-    Stage 1 — PartSpec schema          DONE  (6 tests)
-    Stage 2 — Cello parser             DONE  (23 tests)
-    Stage 3 — Evo 2 interface          DONE  (7 tests; model tests need GPU)
-    Stage 4 — Scoring pipeline         DONE  (44 tests)
-    Stage 5 — Validation + scripts     DONE  (24 tests + 1 integration skipped)
-    Total: 104 passing, 1 skipped
+    - Evo 2 online interface (https://evo2.arcinstitute.org) was used to score sequences
+      manually — no local GPU available. Scores stored in kosuri_contexts_labeled.csv.
+    - NVIDIA NIM API key required for ablation_local_NVIDIA.ipynb
+      (set NVIDIA_API_KEY in .env or notebook config cell)
+    - Kosuri CSV uses triple-quoted strings — build_kosuri_contexts.py strips these
+    - Sequence scores are mean per-token NLL; higher NLL = lower model likelihood
+    - trimmed_sequence column (20 bp upstream + RBS) gives best signal-to-noise for
+      scoring short RBS elements; full_sequence dilutes RBS signal with 726 bp fixed CDS

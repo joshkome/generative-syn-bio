@@ -1,28 +1,42 @@
+# Environment
+.env
+*.token
+
+# Python
 .venv/
 __pycache__/
 *.pyc
-.env
-data/raw/
-results/
 *.egg-info/
+
+# OS
 .DS_Store
+
+# Large model weights
 *.pt
 *.bin
 *.safetensors
 
-# Data — keep folder structure, ignore contents
+# Raw data (large files — must be obtained separately)
 data/raw/*
-data/processed/*
 !data/raw/.gitkeep
+
+# Processed data — keep labeled CSV, ignore generated ones
+data/processed/*
 !data/processed/.gitkeep
-!data/reference/.gitkeep
+!data/processed/kosuri_contexts_labeled.csv
 
-# Results — keep figures you explicitly add, ignore everything else
-results/reports/*
-!results/reports/.gitkeep
+# Results — commit plots and CSVs explicitly
+results/ablation/*
+results/rbs_kosuri_scoring/*
+!results/ablation/*.png
+!results/ablation/*.csv
+!results/rbs_kosuri_scoring/*.png
+!results/rbs_kosuri_scoring/*.csv
 
-# Notebook checkpoint files
+# Archived pipeline code
+old/
+
+# Notebook checkpoints
 .ipynb_checkpoints/
 **/.ipynb_checkpoints/
-.env
-*.token
+scripts/testing.ipynb

@@ -1,0 +1,5 @@
+test,variables,coefficient,p_value,significant_p05
+Pearson r,evo2_log_prob vs mean_xlat (raw),0.5104816479943287,1.0422519182499458e-08,True
+Pearson r,evo2_log_prob vs log10(mean_xlat),0.41560132101205605,5.733375615000619e-06,True
+Spearman rho,evo2_log_prob vs mean_xlat,0.40861939676498676,8.495577048638024e-06,True
+Kendall tau,evo2_log_prob vs mean_xlat,0.2987187974821139,7.67760035503536e-06,True
